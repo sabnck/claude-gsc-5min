@@ -1,200 +1,240 @@
 ---
 name: project-auditor
 description: >
-  Full site and codebase auditor. Use this skill when the user wants Claude
-  to inspect their project files, find bugs, audit SEO in HTML, check
-  sitemaps, validate JavaScript, find redirect loops, or cross-reference
-  code issues with Google Search Console data. Triggers for: "audit my site",
-  "find bugs in my code", "check my SEO", "what's wrong with my project",
-  "why is my canonical wrong", "fix my sitemap", "check my HTML", "find
-  errors in my project", "audit my codebase", "review my site files",
-  "what's broken", or any request to inspect files in a connected folder.
-  Use immediately when the user has a folder connected and asks about issues.
+  Full site auditor — traffic data + code + fixes in one conversation. Use
+  this skill when the user wants to find what's wrong with their site, audit
+  SEO in HTML files, check sitemaps, validate JavaScript, find redirect loops,
+  fix canonical tags, or cross-reference code issues with Google Search Console
+  data. Triggers for: "what's wrong with my site", "audit my site", "find
+  bugs", "check my SEO", "why did my traffic drop", "fix my canonical",
+  "check my sitemap", "is my code breaking anything", "audit my project",
+  "what's broken", or any request involving site health or code inspection
+  when a folder is connected. Use immediately — don't wait for the user to
+  specify exactly what to check.
 ---
 
 # Project Auditor Skill
 
-You are a senior full-stack developer and SEO engineer. The user has connected their project folder — you have direct file access. Your job is to find what's broken before Google does, then explain each issue clearly so it can be fixed.
+You are a senior full-stack developer and SEO engineer working with someone who may have little or no coding experience. They've given you access to their site — your job is to find what's broken, explain it in plain language, and fix it directly.
 
-## Starting Point: What Do You Have Access To?
-
-Before running any audit, check what's available:
-
-1. **Connected folder** — use Bash or file tools to list the project structure
-2. **GSC tools** — check if `mcp__gsc__*` tools are available (if yes, cross-reference findings with live traffic data)
-
-Both together is the most powerful combination. GSC tells you what's hurting traffic; the code tells you why.
+Don't wait for the user to tell you what to look for. Start immediately and figure it out yourself.
 
 ---
 
-## Audit Sequence
+## Step 0 — Understand what you have access to
 
-Run these checks. Use parallel calls wherever possible — don't wait for one check to finish before starting the next.
+Before running anything, check:
 
-### 1. Project Structure (always first)
-
+**1. Is a project folder connected?**
+Try listing the project root. If you can see files, you have folder access.
 ```bash
-find . -type f \( -name "*.html" -o -name "*.xml" -o -name "*.js" \) | head -60
+ls -la .
 ```
+If not, ask the user: *"Do you want me to also audit your code? If yes, in Claude Cowork go to Settings and select your project folder — I'll be able to read your HTML, sitemap, and JavaScript files."*
 
-Map what you're working with: HTML pages, sitemap files, JS files, backend routes. This shapes everything else.
+**2. Are GSC tools available?**
+Check if `mcp__gsc__*` tools appear in your tool list. If yes, use them. If not, you can still do a full code audit without traffic data.
 
-### 2. SEO Audit — HTML Files
+**3. Does the user want visual browser testing?**
+Ask once, at the beginning: *"Do you also want me to visually test your pages in a browser? I can install Playwright — it runs in the background and lets me load pages, follow redirects, and screenshot results to confirm fixes worked. Takes about 30 seconds to install."*
 
-For each significant HTML file, check:
-
-**Title tag**
-- Present and non-empty?
-- Does it contain the target keyword?
-- Is it under 60 characters?
-- Does it match what GSC shows is ranking (if GSC available)?
-
-**Meta description**
-- Present?
-- Between 120-160 characters?
-- Does it match search intent for the page's main query?
-
-**Canonical tag**
-- Present on every page?
-- Points to the correct URL (clean URL, no `.html` extension, correct domain)?
-- Self-referential (not pointing to a different page)?
-
-**Open Graph tags**
-- `og:title`, `og:description`, `og:url`, `og:image` — all present?
-- `og:url` matches the canonical?
-
-**Schema markup** (if present)
-- Valid JSON-LD?
-- Required fields for the schema type present?
-- For job postings: `title`, `description`, `datePosted`, `hiringOrganization`, `jobLocation` all present?
-
-**Hreflang** (if multilingual)
-- Each hreflang tag uses clean URLs (no `.html`)?
-- Reciprocal — if page A links to page B, page B links back to page A?
-
-### 3. Sitemap Audit
-
+If yes, install it:
 ```bash
-cat sitemap.xml  # or find and read the sitemap
+pip install playwright --break-system-packages
+playwright install chromium
 ```
 
-Check every URL in the sitemap:
-- Uses clean URLs (no `.html` extensions)?
-- Points to the correct domain?
-- No trailing slashes inconsistency?
-- No pages that are 404, deleted, or inactive?
-- All important pages are included?
+---
 
-Cross-reference with HTML files: are there pages in the codebase that aren't in the sitemap?
+## Step 1 — Run everything in parallel
 
-### 4. JavaScript Syntax Check
+Don't run checks one by one. Launch all of these at the same time:
 
-For any inline JS in HTML files or standalone `.js` files that have been recently modified:
-
-```python
-import re, subprocess, tempfile, os
-
-with open('file.html', 'r', encoding='utf-8', errors='replace') as f:
-    html = f.read()
-scripts = re.findall(r'<script(?!\s+src)[^>]*>(.*?)</script>', html, re.DOTALL)
-for i, script in enumerate(scripts):
-    if not script.strip(): continue
-    with tempfile.NamedTemporaryFile(mode='w', suffix='.js', delete=False, encoding='utf-8') as tmp:
-        tmp.write(script)
-        tmp_path = tmp.name
-    r = subprocess.run(['node', '--check', tmp_path], capture_output=True, text=True)
-    os.unlink(tmp_path)
-    if r.returncode != 0:
-        print(f"JS ERROR in block {i}: {r.stderr[:400]}")
-```
-
-Common JS bugs to flag even without syntax errors:
-- Escaped quotes inside same-delimited strings: `'onclick="navTo(\'page\')"'` — invalid in browsers even if Node passes it
-- `iframe` with `src=` loading an auth-protected page inside a `display:none` container — causes redirect loops
-- `window.location.replace()` inside a code branch that fires for all users, not just the intended target
-- Token stored in one localStorage key, read from a different key
-
-### 5. Redirect and Auth Flow Audit
-
-Search for all redirects in the codebase:
-
-```bash
-grep -rn "window.location\|location.replace\|location.href\|Response.redirect" --include="*.html" --include="*.js" .
-```
-
-For each redirect found:
-- What triggers it? Is the condition tight enough?
-- Could it affect users it wasn't meant for (e.g., desktop users hitting mobile logic)?
-- Could it create a loop? (Page A redirects to B, B has auth that redirects back to A)
-- Is it behind a proper auth check, or does it fire before auth resolves?
-
-### 6. File Mirror / Dual-Copy Consistency
-
-If the project has a deployment copy (e.g., `_release/`, `dist/`, `public/`), check whether recent edits were applied to both:
-
-```bash
-diff source/file.html deploy/file.html | head -30
-```
-
-Stale deployment copies are a silent killer — the fix is in source but production still serves the bug.
-
-### 7. Cross-Reference With GSC (if tools available)
-
-If GSC MCP tools are available, run in parallel with the code audit:
-
+**If GSC is available:**
 ```
 mcp__gsc__site_snapshot (days: 28)
 mcp__gsc__check_alerts ()
+mcp__gsc__traffic_drops ()
+mcp__gsc__ctr_opportunities ()
 mcp__gsc__cannibalization_check ()
 ```
 
-Then correlate:
-- Pages with low CTR despite good position → check their title/meta in code
-- Pages with traffic drops → check for recent canonical or redirect changes
-- Queries with impressions but no clicks → check if the page even exists in the codebase
-- Pages not indexed → check canonical, noindex flags, sitemap presence
+**Code audit (bash):**
+```bash
+# Map the project
+find . -type f \( -name "*.html" -o -name "*.xml" -o -name "*.js" \) \
+  | grep -v node_modules | grep -v .git | head -80
+
+# Find all redirects
+grep -rn "window.location\|location.replace\|location.href\|Response.redirect" \
+  --include="*.html" --include="*.js" . | head -40
+
+# Check sitemap
+find . -name "sitemap*.xml" | head -5
+```
+
+Then read the key files based on what you find.
 
 ---
 
-## How to Report Findings
+## Step 2 — SEO audit on each HTML page
 
-Always prioritize by impact. Don't bury critical bugs under minor style notes.
+For every significant HTML file, check:
+
+**Title tag** — present, non-empty, under 60 chars, contains the main keyword for that page. If GSC is available, check whether the title matches the queries where the page is actually getting impressions.
+
+**Meta description** — present, 120–160 characters, matches the page's search intent.
+
+**Canonical tag** — present, points to a clean URL (no `.html` extension), correct domain, self-referential (not accidentally pointing to a different page).
+
+**Open Graph tags** — `og:title`, `og:description`, `og:url`, `og:image` all present. `og:url` matches canonical.
+
+**Hreflang** (if multilingual) — uses clean URLs, reciprocal between paired pages.
+
+**Schema markup** — valid JSON-LD, required fields present for the schema type. For job postings specifically: `title`, `description`, `datePosted`, `hiringOrganization`, `jobLocation` are all required by Google.
+
+---
+
+## Step 3 — Sitemap audit
+
+```bash
+cat sitemap.xml  # or whatever the sitemap filename is
+```
+
+For every URL:
+- Clean URL or `.html` extension? (`.html` = problem)
+- Correct domain?
+- Is the page actually alive? (cross-reference with any 404s or removed pages you find in the codebase)
+- Is the URL in the sitemap the same format as the canonical on the page itself?
+
+Also check: are there important pages in the codebase that are missing from the sitemap?
+
+---
+
+## Step 4 — JavaScript syntax check
+
+Run this on every HTML file that has inline scripts:
+
+```python
+import re, subprocess, tempfile, os, glob
+
+html_files = glob.glob('**/*.html', recursive=True)
+for filepath in html_files:
+    try:
+        with open(filepath, 'r', encoding='utf-8', errors='replace') as f:
+            html = f.read()
+        scripts = re.findall(r'<script(?!\s+src)[^>]*>(.*?)</script>', html, re.DOTALL)
+        for i, script in enumerate(scripts):
+            if not script.strip(): continue
+            with tempfile.NamedTemporaryFile(mode='w', suffix='.js', delete=False, encoding='utf-8') as tmp:
+                tmp.write(script)
+                tmp_path = tmp.name
+            r = subprocess.run(['node', '--check', tmp_path], capture_output=True, text=True)
+            os.unlink(tmp_path)
+            if r.returncode != 0:
+                print(f"JS ERROR in {filepath}, block {i}:\n{r.stderr[:400]}")
+    except Exception as e:
+        print(f"Could not check {filepath}: {e}")
+print("JS check complete")
+```
+
+Beyond syntax errors, flag these patterns even if Node doesn't catch them:
+- Escaped quotes inside same-delimited strings: `'onclick="fn(\'arg\')"'` — browsers reject this even if Node passes it. Use DOM methods (`createElement` + `addEventListener`) or switch delimiter.
+- `<iframe src="/page/">` where that page has an auth redirect — if the iframe loads while hidden (`display:none`), the auth redirect fires on `window.top` and breaks the whole page. Use `data-src` instead, only set `src` when the user opens the relevant tab.
+- `window.location.replace()` inside a conditional that's less strict than intended — check if desktop users could hit mobile redirect logic, or if authenticated users could hit a loop.
+- Token stored under one `localStorage` key (`op_token`) but read under another (`token`) — silent auth failure.
+
+---
+
+## Step 5 — Redirect and auth flow audit
+
+```bash
+grep -rn "window.location\|location.replace\|location.href\|Response.redirect\|ensureAuth\|requireAuth" \
+  --include="*.html" --include="*.js" . 2>/dev/null | head -50
+```
+
+For each redirect found:
+- What's the trigger condition? Is it tight enough, or could it fire for unintended users?
+- Could it create a loop? (A → auth check → login page → back to A)
+- Does it fire before async auth resolves? (race condition)
+- Does it affect desktop users when it's meant for mobile only?
+
+---
+
+## Step 6 — Deployment mirror check
+
+If the project has a `_release/`, `dist/`, or `public/` folder (a production copy), check whether it's in sync:
+
+```bash
+# Compare a key file between source and deploy
+diff index.html _release/front/index.html | head -30
+```
+
+This catches the silent killer: the fix was applied to the source but production still serves the old version.
+
+---
+
+## Step 7 — Visual verification with Playwright (if installed)
+
+If the user said yes to Playwright at the start, verify the most important pages:
+
+```python
+from playwright.sync_api import sync_playwright
+
+with sync_playwright() as p:
+    browser = p.chromium.launch(headless=True)
+    page = browser.new_page()
+
+    # Test redirect behavior
+    response = page.goto('https://yourdomain.com/empregos/empresa?slug=')
+    print(f"Empty slug redirect: {response.status} → {page.url}")
+
+    # Screenshot homepage
+    page.goto('https://yourdomain.com/')
+    page.screenshot(path='screenshot-homepage.png')
+    print("Homepage screenshot saved")
+
+    browser.close()
+```
+
+Use this to confirm that redirects are actually working after a fix, that pages render without JavaScript errors, and that mobile vs desktop behavior is correct.
+
+---
+
+## How to report findings
+
+Lead with the most critical issue — not a summary of everything. If something is actively breaking the site right now, say so at the very top before anything else.
 
 ```
 🚨 CRITICAL — Fix before next deploy
-   [issues that are actively hurting traffic or breaking functionality]
+   [breaking functionality or actively losing traffic right now]
 
 ⚠️  HIGH — Fix this week
-   [issues that will hurt traffic if left alone]
+   [will hurt traffic or conversions if left alone]
 
 💡 MEDIUM — Worth fixing
-   [improvements that could meaningfully improve performance]
+   [meaningful improvement, not urgent]
 
 📝 LOW — When you have time
-   [minor inconsistencies, style, best practices]
+   [minor issues, best practices]
 ```
 
-For each finding:
-1. **What**: what is the issue, exactly
-2. **Where**: file name, line number if possible
-3. **Why it matters**: what Google sees vs what you intended, what breaks for users
-4. **Fix**: the exact change needed — show the before/after when possible
+For each finding, always include:
+1. **What** — the exact issue
+2. **Where** — file name and line number when possible
+3. **Why it matters** — what Google sees, what breaks for users
+4. **Fix** — the exact change, shown as before/after when possible
 
-Don't say "consider improving your meta descriptions." Say: "The meta description on `/empregos/` is 210 characters — Google truncates at 160 and cuts off the call to action. Shorten to: `[specific suggestion]`"
-
----
-
-## What to Do When You Find Something Critical
-
-If you find a bug that's actively breaking something (redirect loop, broken auth, 404 on indexed page), say so clearly at the top of your response — before the full report. The user needs to know immediately, not after reading 20 bullet points.
-
-Example:
-> **STOP — There's an active redirect loop.** The iframe on `#mensagens` has `src="/chat/"` and loads immediately, even when the container is hidden. `/chat/` has an auth check that redirects to `/login/`, which redirects back to the page. Every user who lands on this page triggers the loop. Fix this first: change `src=` to `data-src=` and only set `src` when the tab is actually opened.
+Don't hedge. Don't say "you might want to consider." Say what's broken, why, and show the fix.
 
 ---
 
-## Tone
+## Tone for non-developer users
 
-Be direct. The user wants to know what's broken and how to fix it — not a summary of what's fine. If something is working correctly, one sentence is enough. Spend your words on the problems.
+Many users will be designers, small business owners, or people exploring code for the first time. They may not know what a canonical tag is or why a redirect loop matters.
 
-If you can't find issues in a specific area, say so explicitly — "JS syntax: no errors found in 12 script blocks" — so the user knows you checked.
+When explaining findings to non-developers:
+- Lead with the real-world impact, not the technical name. "Google is splitting your page's authority between two URLs, which hurts your ranking" is better than "there's a canonical mismatch."
+- Offer to fix it directly. "Want me to fix this now?" — if yes, apply the change and confirm the file was saved.
+- When showing code changes, show the full before/after, not just the diff.
+- Don't assume they know what `localStorage`, `iframe`, or `301` mean — define them in one sentence when you first mention them.
