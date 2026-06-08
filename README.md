@@ -5,6 +5,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Works with Claude Desktop](https://img.shields.io/badge/Claude-Desktop-orange)](https://claude.ai/download)
 [![MCP Compatible](https://img.shields.io/badge/MCP-Compatible-blue)](https://modelcontextprotocol.io)
+[![Português](https://img.shields.io/badge/Leia%20em-Portugu%C3%AAs%20%F0%9F%87%A7%F0%9F%87%B7-009c3b)](README.pt.md)
 
 ---
 
