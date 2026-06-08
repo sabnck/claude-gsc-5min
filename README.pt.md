@@ -1,6 +1,6 @@
-# 🔍 Conecta o Claude ao Google Search Console em 5 Minutos
+# 🔍 Deixa o Claude Corrigir seu Site — Dados de Tráfego + Auditoria de Código + Correções, Tudo de Uma Vez
 
-> Sem dashboards. Sem exportar CSV. Sem ferramentas de SEO. Só perguntar ao Claude diretamente.
+> Você não precisa saber o que está errado. O Claude encontra, explica e corrige.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Funciona com Claude Desktop](https://img.shields.io/badge/Claude-Desktop-orange)](https://claude.ai/download)
@@ -9,200 +9,174 @@
 
 ---
 
-## Este repo cobre duas coisas
+## O que é isso
 
-**[Parte 1](#parte-1--conecta-o-claude-ao-google-search-console)** — Conecta o Claude aos seus dados de tráfego em tempo real via Google Search Console (configuração de 5 minutos)
+Você dá ao Claude duas coisas: acesso ao seu **Google Search Console** (dados de tráfego em tempo real) e acesso à sua **pasta de projeto** (seus arquivos reais). Depois pergunta "o que está errado no meu site?"
 
-**[Parte 2](#parte-2--deixa-o-claude-auditar-seu-projeto)** — Deixa o Claude ler os arquivos reais do seu projeto e encontrar o que está quebrando seu SEO antes que o Google perceba (sem configuração extra)
+O Claude faz o resto — tudo ao mesmo tempo. Lê seus dados de tráfego e seu código simultaneamente, conecta os pontos, encontra o que está te prejudicando e já corrige diretamente nos arquivos.
 
-Usados juntos, o Claude vira um loop completo de auditoria SEO + dev: ele vê o que está machucando seu tráfego *e* encontra a causa raiz no seu código.
+Uma conversa. Sem precisar saber de SEO. Sem precisar saber de programação.
 
 ---
 
-## Parte 1 — Conecta o Claude ao Google Search Console
+## O que acontece depois da configuração
 
-### O que você pode perguntar
+Você pergunta: *"O que está errado no meu site?"*
 
+O Claude, trabalhando em paralelo:
+
+- Puxa 28 dias de dados do Google Search Console — cliques, impressões, posições, alertas
+- Lê seus arquivos HTML — títulos, meta descrições, canonical, tags OG, schema markup
+- Lê seu sitemap — verifica cada URL em busca de problemas
+- Escaneia seu JavaScript — erros de sintaxe, lógica de redirect, fluxos de autenticação que podem estar em loop
+- Cruza os dados de tráfego com o código — encontra onde o problema que o Google vê corresponde a um bug nos seus arquivos
+
+Depois te diz exatamente o que encontrou, por que importa, e ou corrige diretamente ou mostra a mudança exata a fazer.
+
+---
+
+## Exemplo real — o que o Claude encontrou em um site ao vivo
+
+Este repo foi criado durante uma auditoria real. Aqui está um trecho do que saiu:
+
+**Dos dados de tráfego (Google Search Console):**
 ```
-"Por que o tráfego da minha homepage caiu 80% esse mês?"
-
-"Quais páginas têm as piores taxas de clique?"
-
-"Estou em 1º lugar para algumas palavras-chave mas não recebo cliques — o que está acontecendo?"
-
-"Encontra os conteúdos que estão decaindo antes que caiam de vez."
-
-"Quais são os ganhos rápidos mais fáceis essa semana?"
-
-"Alguma página minha está competindo com ela mesma pela mesma busca?"
-```
-
-### O que você precisa
-
-| Requisito | Observação |
-|---|---|
-| [Claude Desktop](https://claude.ai/download) | O plano gratuito funciona |
-| [Node.js](https://nodejs.org) v18+ | Só instalar, ~30 segundos |
-| Google Search Console | Qualquer propriedade que você gerencia |
-| ~5 minutos | Sério |
-
-### Como configurar
-
-**Passo 1 — Instala o Node.js** (pula se já tiver)
-
-Baixa em [nodejs.org](https://nodejs.org) e roda o instalador.
-
-**Passo 2 — Cria as credenciais OAuth do Google**
-
-1. Vai em [Google Cloud Console](https://console.cloud.google.com)
-2. Cria um novo projeto (nome qualquer — "Claude GSC" funciona)
-3. **APIs e Serviços → Biblioteca** → busca **Google Search Console API** → Ativa
-4. **APIs e Serviços → Credenciais → + Criar Credenciais → ID do cliente OAuth 2.0**
-5. Escolhe **Aplicativo de desktop**, coloca qualquer nome, clica em **Criar**
-6. Clica em **Baixar JSON** — salva em algum lugar que você vai lembrar
-
-**Passo 3 — Roda o script de configuração**
-
-Windows: clica duas vezes em `setup.bat` — Mac/Linux: `chmod +x setup.sh && ./setup.sh`
-
-O script verifica o Node.js, pede o caminho do JSON do OAuth e a URL do seu site, e escreve a config do Claude automaticamente.
-
-**Passo 4 — Reinicia o Claude e autoriza**
-
-O Claude vai pedir para autorizar o Google na primeira vez. Segue o link, aprova e pronto.
-
-### Exemplo de resultado
-
-```
-📊 Visão Geral (últimos 28 dias)
-   Cliques: 1.247  |  Impressões: 18.432  |  CTR: 6,8%  |  Posição média: 14,2
-
-🚨 Problema Crítico Encontrado
-   Sua homepage caiu 81% em cliques em 3 semanas.
+🚨 Cliques da homepage caíram 81% em 3 semanas.
    A posição está estável em 2,9 — é problema de CTR, não de ranking.
-   O título "Bem-vindo ao nosso site" não corresponde ao que as pessoas buscaram.
-
-⚡ Ganhos Rápidos (essa semana)
-   3 páginas na posição 6-10 com muitas impressões e CTR baixo.
-   Ajustar os títulos pode recuperar ~40 cliques/semana sem link building.
+   Título "Bem-vindo ao Nosso Ecossistema" não corresponde ao que as pessoas buscaram.
+   Correção: reescrever o título com as palavras-chave que as pessoas realmente usam.
 ```
 
-### O que o Claude consegue verificar
-
-| Análise | O que verifica |
-|---|---|
-| **Quedas de tráfego** | Compara 3 períodos, isola páginas e buscas que caíram |
-| **Oportunidades de CTR** | Onde seu ranking vs taxa de clique está abaixo do esperado |
-| **Ganhos rápidos** | Buscas na posição 6-15 com potencial de melhoria fácil |
-| **Decaimento de conteúdo** | Páginas com queda consistente há 3+ meses |
-| **Canibalização** | Múltiplas URLs competindo pela mesma busca |
-| **Lacunas de conteúdo** | Buscas onde você rankeia mas não tem conteúdo real |
-| **Auditoria de sitemap** | Erros de cobertura, páginas faltando |
-| **Inspeção de URL** | Status de indexação, mobile, data do último crawl |
-
-### Instala a Skill GSC Analyst (usuários do Cowork)
-
-**[Baixar gsc-analyst.skill](./gsc-analyst.skill)**
-
-No Cowork: Configurações → Skills → Instalar de arquivo → `gsc-analyst.skill`
-
----
-
-## Parte 2 — Deixa o Claude Auditar seu Projeto
-
-> Sem configuração extra. O Claude lê seus arquivos diretamente e encontra o que está quebrado antes que o Google perceba.
-
-Isso é o que a maioria das "ferramentas de IA para SEO" erra: **o problema nem sempre está nos dados de tráfego — está no código.**
-
-Canonical tags erradas. Sitemap apontando para URLs com `.html` que redirecionam. Títulos que parecem certos até você checar o que o Google realmente indexou. Redirects de autenticação que criam loops no mobile. Iframes que carregam antes da autenticação e quebram a página de login inteira.
-
-O Claude consegue ler os arquivos do seu projeto e cruzar com os dados do GSC para encontrar a causa raiz — não só o sintoma.
-
-### Como fica na prática
-
-No **Claude Cowork**: Configurações → seleciona sua pasta de projeto. Depois pergunta:
-
-> *"Audita o SEO do meu site — verifica o código e cruza com meus dados do Search Console"*
-
-O Claude vai:
-1. Mapear a estrutura do projeto
-2. Ler os arquivos HTML e verificar title, meta, canonical, OG tags, schema markup
-3. Ler o sitemap e verificar o formato e status de cada URL
-4. Escanear o JavaScript em busca de erros de sintaxe, lógica de redirect quebrada, problemas de auth
-5. Cruzar com os dados do GSC para ver quais problemas estão realmente machucando o tráfego
-6. Entregar uma lista de correções priorizada
-
-### O que o Claude encontra que você jamais acharia manualmente
-
-| Problema | Onde se esconde |
-|---|---|
-| Canonical apontando para URL com `.html` | `<link rel="canonical">` no HTML |
-| Sitemap listando páginas inativas/deletadas | Seu `sitemap.xml` |
-| Redirect de auth criando loop de login | Redirect JS dentro da função de inicialização mobile |
-| Título não corresponde às buscas do GSC | Verificado cruzando código com dados do GSC |
-| Schema markup faltando campos obrigatórios | `<script type="application/ld+json">` |
-| Iframe carregando página de auth antes do usuário abrir | `src=` em container com `display:none` |
-| Páginas faltando no sitemap | Rotas do projeto vs entradas do sitemap comparadas |
-| Edição aplicada na source mas não no deploy | Diff entre `source/` e `_release/` |
-
-### Exemplo de resultado
-
+**Dos arquivos de código (encontrado simultaneamente):**
 ```
-🚨 CRÍTICO — Corrigir antes do próximo deploy
-
-   [empregos/index.html] Canonical aponta para /empregos/index.html
-   O Google está indexando a versão .html. Toda a autoridade de link está dividida.
+🚨 [empregos/index.html] Canonical aponta para /empregos/index.html
+   O Google vê duas versões desta página. A autoridade de link está dividida.
    Correção: <link rel="canonical" href="https://seusite.com/empregos/">
 
-   [servicos/index.html linha 8189] Risco de loop de redirect
-   mobStart() redireciona todos os prestadores autenticados para /servicos/?painel=prestador
-   — incluindo usuários desktop. Isso dispara em cada carregamento de página, não só mobile.
+🚨 [servicos/index.html, linha 8189] Loop de redirect no mobile
+   Todos os usuários logados são redirecionados para o painel mobile — inclusive desktop.
+   Isso dispara em todo carregamento de página. Alguns usuários nunca chegam à página.
    Correção: adicionar verificação de dispositivo antes do redirect.
 
-⚠️  ALTO — Corrigir essa semana
-
-   [sitemap.xml] 3 URLs usam extensão .html — deveriam ser URLs limpas
-   [empregos/empresa.html] Acessível via ?slug= com valor vazio — retorna 200
-   Deveria redirecionar para /empregos/ com 301.
+⚠️  [sitemap.xml] 3 URLs usam extensão .html — o Google prefere URLs limpas
+⚠️  [empregos/empresa.html] Retorna 200 com ?slug= vazio — deveria ser redirect 301
 ```
 
-### Instala a Skill de Auditoria de Projeto (usuários do Cowork)
+O Claude então aplicou as correções de canonical, reescreveu as entradas do sitemap e adicionou a proteção de redirect — tudo na mesma conversa.
 
+---
+
+## Configuração (5 minutos)
+
+### Passo 1 — Instala o Node.js
+
+Baixa em [nodejs.org](https://nodejs.org) → roda o instalador → pronto. Pula se já tiver.
+
+### Passo 2 — Cria as credenciais OAuth do Google
+
+É isso que dá permissão ao Claude de ler seus dados do Search Console. Fica na sua máquina — nada passa por nenhum serviço de terceiros.
+
+1. Vai em [console.cloud.google.com](https://console.cloud.google.com)
+2. Cria um projeto (clica no dropdown no topo → Novo Projeto → qualquer nome)
+3. **APIs e Serviços → Biblioteca** → busca "Google Search Console API" → Ativa
+4. **APIs e Serviços → Credenciais → + Criar Credenciais → ID do cliente OAuth 2.0**
+5. Escolhe **Aplicativo de desktop** → coloca qualquer nome → Criar
+6. **Baixar JSON** → salva em algum lugar permanente (não na pasta Downloads)
+
+> Se aparecer "O Google não verificou este app" — é normal. Clica em **Avançado → Continuar**. É sua própria chave acessando seus próprios dados.
+
+### Passo 3 — Roda o script de configuração
+
+**Windows:** clica duas vezes em `setup.bat`
+
+**Mac / Linux:** `chmod +x setup.sh && ./setup.sh`
+
+O script pede o caminho do arquivo JSON e a URL do seu site, depois escreve tudo na config do Claude automaticamente.
+
+### Passo 4 — Reinicia o Claude e autoriza
+
+Na primeira vez que abrir, o Claude vai mostrar um link de autorização. Abre, entra com o Google, aprova. Pronto.
+
+### Passo 5 — Conecta sua pasta de projeto (opcional mas poderoso)
+
+No **Claude Cowork**: Configurações → seleciona sua pasta de projeto.
+
+É isso que destrava a auditoria de código. O Claude vai ler seus arquivos reais — HTML, sitemaps, JavaScript — e cruzar com os dados de tráfego. Pode pular isso se quiser só a análise de tráfego.
+
+---
+
+## O que o Claude consegue verificar
+
+| Área | O que verifica |
+|---|---|
+| **Quedas de tráfego** | Compara 3 períodos para isolar quando e o que caiu |
+| **Problemas de CTR** | Onde sua posição é boa mas ninguém clica |
+| **Ganhos rápidos** | Buscas na posição 6-15 que podem melhorar com pequenas correções |
+| **Decaimento de conteúdo** | Páginas que perdem tráfego há meses |
+| **Canibalização** | Múltiplas páginas competindo pela mesma busca |
+| **Tags canonical** | URL errada, extensão `.html`, apontando para página errada |
+| **Sitemap** | URLs mortas, páginas faltando, inconsistências de formato |
+| **JavaScript** | Erros de sintaxe, loops de redirect, problemas de auth |
+| **Schema markup** | Campos obrigatórios faltando para resultados ricos (vagas, produtos, etc.) |
+| **Consistência de deploy** | Se a source e a cópia de produção estão realmente sincronizadas |
+
+---
+
+## Quer que o Claude também teste seu site visualmente?
+
+O Claude pode instalar o **Playwright** — uma ferramenta que abre um navegador real em segundo plano — e de fato carregar suas páginas, seguir redirects e tirar screenshots dos resultados para confirmar que as correções funcionaram.
+
+Quando você pedir para o Claude auditar seu site, ele vai perguntar: *"Quer que eu também teste as páginas visualmente no navegador? Posso instalar o Playwright para isso — ele roda em segundo plano e não abre nenhuma janela."*
+
+Só falar sim e o Claude cuida da instalação e dos testes automaticamente.
+
+---
+
+## Instala as skills (usuários do Claude Cowork)
+
+Duas skills disponíveis. Instala as duas para a experiência completa.
+
+**GSC Analyst** — guia o Claude pela análise de tráfego com seus dados do Search Console:
+**[Baixar gsc-analyst.skill](./gsc-analyst.skill)**
+
+**Project Auditor** — guia o Claude pela auditoria de código e cruzamento com o GSC:
 **[Baixar project-auditor.skill](./project-auditor.skill)**
 
-No Cowork: Configurações → Skills → Instalar de arquivo → `project-auditor.skill`
+No Cowork: Configurações → Skills → Instalar de arquivo
 
 ---
 
-## Como funciona
-
-**Parte 1 (GSC)** usa o [suganthan-gsc-mcp](https://www.npmjs.com/package/suganthan-gsc-mcp) — um servidor MCP local rodando via `npx`. Autentica com OAuth do Google e expõe 20 ferramentas do Search Console para o Claude. Seus dados nunca saem da sua máquina.
-
-**Parte 2 (Auditoria de código)** usa o acesso a arquivos nativo do Claude no Cowork ou Claude Code. Sem MCP extra. O Claude lê seus arquivos diretamente e roda análises em ambiente Linux isolado.
-
-```
-Parte 1: Claude ←→ Servidor MCP (local) ←→ API do Google Search Console
-Parte 2: Claude ←→ Pasta do seu projeto (acesso direto a arquivos)
-Ambos:  Claude cruza dados do GSC + achados no código
-```
-
----
-
-## Solução de problemas (Parte 1)
+## Solução de problemas
 
 **"MCP server not connected"** → Reinicia o Claude Desktop depois de rodar o script.
 
-**"Authorization error"** → Refaz o fluxo OAuth. Às vezes precisa de uma segunda tentativa.
+**"Authorization error"** → Refaz o fluxo OAuth do Google — às vezes precisa de uma segunda tentativa.
 
-**"Site not found"** → Verifica `GSC_SITE_URL` na config. Propriedades de domínio: `sc-domain:seudominio.com`. URL prefix: `https://seudominio.com/`.
+**"Site not found" ou dados errados** → Verifica `GSC_SITE_URL` na config do Claude. Propriedades de domínio usam `sc-domain:seudominio.com`; URL prefix usam `https://seudominio.com/`.
 
 **Node.js não encontrado após instalar** → Fecha e reabre o terminal depois de instalar.
+
+**O Claude não consegue ver meus arquivos** → No Cowork, vai em Configurações e confirma que a pasta do projeto está selecionada.
+
+---
+
+## Como funciona (técnico)
+
+A conexão com o GSC usa o [suganthan-gsc-mcp](https://www.npmjs.com/package/suganthan-gsc-mcp) — um servidor MCP local que roda via `npx`, autentica com suas credenciais OAuth do Google e passa os dados do Search Console direto para o Claude. Nada sai da sua máquina.
+
+A auditoria de código usa o acesso nativo a arquivos do Claude no Cowork. O Claude lê seus arquivos diretamente e roda as análises em um ambiente Linux isolado. Sem MCP extra ou ferramentas adicionais.
+
+```
+Dados de tráfego: Claude ←→ servidor MCP (local, npx) ←→ API do Google Search Console
+Auditoria código: Claude ←→ Pasta do seu projeto (acesso direto)
+Combinado:        Claude conecta os dois — encontra a causa raiz, não só o sintoma
+```
 
 ---
 
 ## Contribuir
 
-Encontrou um prompt de análise melhor? Um padrão de bug que vale adicionar ao auditor? Abre um PR.
+Encontrou um padrão de bug que vale adicionar ao auditor? Um prompt de análise melhor? Abre um PR.
 
 ---
 
@@ -212,5 +186,5 @@ MIT — usa, faz fork, compartilha.
 
 ---
 
-*Feito por [Fernandes](https://github.com/sabnck) enquanto fazia análise de SEO real e auditoria de código com o Claude.*  
-*Os problemas nos exemplos acima foram encontrados em um site de produção real.*
+*Feito por [Fernandes](https://github.com/sabnck) durante uma auditoria real de site de produção com o Claude.*  
+*Cada problema nos exemplos acima foi encontrado e corrigido em um site real, numa única conversa.*
